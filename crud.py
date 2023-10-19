@@ -30,12 +30,12 @@ def create_user(db: Session, user: schemas.UserCreate):
     return db_user
 
 
-def get_properties(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.Property).offset(skip).limit(limit).all()
+def get_properties(db: Session):
+    return db.query(models.Property).all()
 
 
-def create_user_item(db: Session, item: schemas.PropertyCreate, user_id: int):
-    db_item = models.Property(**item.model_dump(), owner_id=user_id)
+def create_property(db: Session, prop: schemas.PropertyCreate):
+    db_item = models.Property(**prop.model_dump())
     db.add(db_item)
     db.commit()
     db.refresh(db_item)

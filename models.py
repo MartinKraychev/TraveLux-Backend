@@ -1,20 +1,6 @@
-import enum
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Float, Enum
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Float
 from sqlalchemy.orm import relationship
-
 from database import Base
-
-
-class Types(enum.Enum):
-    flat = 1
-    house = 2
-    vila = 3
-
-
-class Location(enum.Enum):
-    Usa = 1
-    Europe = 2
-    Australia = 3
 
 
 class User(Base):
@@ -35,14 +21,14 @@ class Property(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, index=True)
-    type = Column(Enum(Types))
+    type = Column(String, index=True)
     image_url = Column(String, index=True)
     # img -> cloudinary
     price_per_night = Column(Float, index=True)
     address = Column(String, index=True)
-    owner_number = Column(Integer, index=True)
+    owner_number = Column(String, index=True)
     summary = Column(String, index=True)
-    location = Column(Enum(Location))
+    location = Column(String, index=True)
     owner_id = Column(Integer, ForeignKey("users.id"))
 
     owner = relationship("User", back_populates="properties")

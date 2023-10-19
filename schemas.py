@@ -1,15 +1,18 @@
+from typing import Literal
+
 from pydantic import BaseModel
 
 
 class PropertyBase(BaseModel):
     title: str
-    type: str
+    type: Literal['Flat', 'Vila', 'House']
     image_url: str
     price_per_night: float
     address: str
     owner_number: str
     summary: str
-    location: str
+    location: Literal['Usa', 'Europe', 'Australia']
+    owner_id: int
 
 
 class PropertyCreate(PropertyBase):
@@ -18,7 +21,6 @@ class PropertyCreate(PropertyBase):
 
 class Property(PropertyBase):
     id: int
-    owner_id: int
 
     class Config:
         from_attributes = True
