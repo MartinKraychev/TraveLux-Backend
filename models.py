@@ -1,6 +1,7 @@
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Float
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Float, DateTime
 from sqlalchemy.orm import relationship
 from database import Base
+import datetime
 
 
 class User(Base):
@@ -45,6 +46,14 @@ class Rating(Base):
 
     owner = relationship("User", back_populates="ratings")
     property = relationship("Property", back_populates="ratings")
+
+
+class Token(Base):
+    __tablename__ = "token"
+    user_id = Column(Integer)
+    access_token = Column(String(450), primary_key=True)
+    status = Column(Boolean)
+    created_date = Column(DateTime, default=datetime.datetime.now)
 
 
 
