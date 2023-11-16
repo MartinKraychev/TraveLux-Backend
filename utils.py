@@ -1,10 +1,12 @@
 from functools import wraps
 
+from fastapi import HTTPException
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from typing import Union, Any
 from jose import jwt
 
+import crud
 import models
 
 
@@ -45,9 +47,30 @@ def token_required(func):
                                                           access_token=kwargs['dependencies'],
                                                           status=True).first()
         if data:
-            return func(kwargs['dependencies'], kwargs['db'])
+            return func(**kwargs)
 
         else:
             return {'msg': "Token blocked"}
+
+    return wrapper
+
+
+def is_property_owner(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        db = kwargs['db']
+        property_id = kwargs['property_id']
+        prop = crud.get_property(db, property_id)
+
+        if prop is None:
+            raise HTTPException(status_code=404, detail="Property not found")
+
+        payload = jwt.decode(kwargs['dependencies'], JWT_SECRET_KEY, ALGORITHM)
+        user_id = payload['sub']
+
+        if int(user_id) != prop.owner_id:
+            raise HTTPException(status_code=403, detail="Unauthorised")
+
+        return func(**kwargs)
 
     return wrapper

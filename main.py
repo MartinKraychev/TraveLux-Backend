@@ -10,7 +10,7 @@ import schemas
 from auth_bearer import JWTBearer
 
 from database import SessionLocal, engine
-from utils import verify_password, create_access_token, token_required
+from utils import verify_password, create_access_token, token_required, is_property_owner
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -96,13 +96,41 @@ def get_user_by_id(user_id: int, db: Session = Depends(get_db)):
 
 
 @app.post("/properties/", response_model=schemas.Property)
-def create_property(prop: schemas.PropertyCreate, db: Session = Depends(get_db)):
-    return crud.create_property(db=db, prop=prop)
+@token_required
+def create_property(prop: schemas.PropertyCreate, dependencies=Depends(JWTBearer()), db: Session = Depends(get_db)):
+    return crud.create_property(db=db, prop=prop, token=dependencies)
 
 
-@app.get("/properties/", response_model=list[schemas.Property])
-def get_properties(db: Session = Depends(get_db)):
-    properties = crud.get_properties(db)
+@app.get("/properties/{property_id}/edit", response_model=schemas.Property)
+@token_required
+def edit_property(property_id: int, dependencies=Depends(JWTBearer()), db: Session = Depends(get_db)):
+    prop = crud.get_property(db, property_id)
+    if prop is None:
+        raise HTTPException(status_code=404, detail="Property not found")
+    return prop
+
+
+@app.patch("/properties/{property_id}/edit", response_model=schemas.Property)
+@token_required
+@is_property_owner
+def edit_property(property_id: int, prop_data: schemas.PropertyCreate, dependencies=Depends(JWTBearer()), db: Session = Depends(get_db)):
+    prop = crud.get_property(db, property_id)
+    # if prop is None:
+    #     raise HTTPException(status_code=404, detail="Property not found")
+    #
+    # payload = jwt.decode(dependencies, JWT_SECRET_KEY, ALGORITHM)
+    # user_id = payload['sub']
+    #
+    # if user_id != prop.owner_id:
+    #     raise HTTPException(status_code=403, detail="Unauthorised")
+
+    return crud.edit_property(db, prop, prop_data)
+
+
+@app.get("/my-properties/", response_model=list[schemas.Property])
+@token_required
+def get_my_properties(dependencies=Depends(JWTBearer()), db: Session = Depends(get_db)):
+    properties = crud.get_my_properties(db, dependencies)
     return properties
 
 
@@ -117,7 +145,9 @@ def get_property_by_id(property_id: int, db: Session = Depends(get_db)):
 # Todo
 # Login ,register, logout using token
 # CRUD property
+# Alembic? def vs async def?
 # file storage?
+# Docs
 # My properties, user == user.id
 # Add rating, check if user has rated. Users cannot rate own properties, all ratings
 # Meet the team - users with most properties

@@ -9,10 +9,8 @@ class PropertyBase(BaseModel):
     image_url: str
     price_per_night: float
     address: str
-    owner_number: str
     summary: str
     location: Literal['Usa', 'Europe', 'Australia']
-    owner_id: int
 
 
 class PropertyCreate(PropertyBase):
@@ -50,4 +48,3 @@ class User(UserBase):
 
 class Token(BaseModel):
     access_token: str
-    refresh_token: str
