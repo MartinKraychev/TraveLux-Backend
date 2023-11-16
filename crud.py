@@ -91,3 +91,9 @@ def edit_property(db: Session, prop, prop_data):
     db.commit()
     db.refresh(prop)
     return prop
+
+
+def delete_property(db: Session, property_id):
+    prop = get_property(db, property_id)
+    db.delete(prop)
+    db.commit()

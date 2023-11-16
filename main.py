@@ -43,7 +43,7 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
 
 @app.post('/login', summary="Create access and refresh tokens for user", response_model=schemas.Token)
-async def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
+def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
     db_user_with_email = crud.get_user_by_email(db, email=user.email)
     if db_user_with_email is None:
         raise HTTPException(
@@ -115,16 +115,15 @@ def edit_property(property_id: int, dependencies=Depends(JWTBearer()), db: Sessi
 @is_property_owner
 def edit_property(property_id: int, prop_data: schemas.PropertyCreate, dependencies=Depends(JWTBearer()), db: Session = Depends(get_db)):
     prop = crud.get_property(db, property_id)
-    # if prop is None:
-    #     raise HTTPException(status_code=404, detail="Property not found")
-    #
-    # payload = jwt.decode(dependencies, JWT_SECRET_KEY, ALGORITHM)
-    # user_id = payload['sub']
-    #
-    # if user_id != prop.owner_id:
-    #     raise HTTPException(status_code=403, detail="Unauthorised")
-
     return crud.edit_property(db, prop, prop_data)
+
+
+@app.delete("/properties/{property_id}/delete")
+@token_required
+@is_property_owner
+def delete_property(property_id: int, dependencies=Depends(JWTBearer()), db: Session = Depends(get_db)):
+    crud.delete_property(db, property_id)
+    return {'message': 'Property deleted successfully'}
 
 
 @app.get("/my-properties/", response_model=list[schemas.Property])
@@ -143,14 +142,9 @@ def get_property_by_id(property_id: int, db: Session = Depends(get_db)):
 
 
 # Todo
-# Login ,register, logout using token
-# CRUD property
-# Alembic? def vs async def?
 # file storage?
-# Docs
-# My properties, user == user.id
+# Docs, refactor
 # Add rating, check if user has rated. Users cannot rate own properties, all ratings
 # Meet the team - users with most properties
 # permissions, some views are for everybody and some are only for logged in users
-# Unauthorized page, 404?
 
