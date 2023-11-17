@@ -101,6 +101,12 @@ def create_property(prop: schemas.PropertyCreate, dependencies=Depends(JWTBearer
     return crud.create_property(db=db, prop=prop, token=dependencies)
 
 
+@app.get("/properties/", response_model=list[schemas.Property])
+def get_properties(db: Session = Depends(get_db)):
+    properties = crud.get_properties(db)
+    return properties
+
+
 @app.get("/properties/{property_id}/edit", response_model=schemas.Property)
 @token_required
 def edit_property(property_id: int, dependencies=Depends(JWTBearer()), db: Session = Depends(get_db)):
@@ -138,13 +144,53 @@ def get_property_by_id(property_id: int, db: Session = Depends(get_db)):
     prop = crud.get_property(db, property_id)
     if prop is None:
         raise HTTPException(status_code=404, detail="Property not found")
-    return prop
+
+    # Calculate average rating
+    average_rating = sum([rate.vote for rate in prop.ratings]) / len(prop.ratings) if prop.ratings else 0.0
+
+    # Create a dictionary representation of the model
+    prop_dict = prop.__dict__
+
+    # Remove any keys that are not part of the Pydantic model
+    prop_dict.pop('_sa_instance_state', None)
+
+    # Add the average_rating to the dictionary
+    prop_dict['average_rating'] = average_rating
+
+    # Create an instance of the Pydantic model
+    response_model = schemas.Property(**prop_dict)
+
+    return response_model
+
+
+@app.post("/properties/{property_id}/rate")
+@token_required
+def rate_property(rate: schemas.Rate, property_id: int, dependencies=Depends(JWTBearer()), db: Session = Depends(get_db)):
+    prop = crud.get_property(db, property_id)
+    if prop is None:
+        raise HTTPException(status_code=404, detail="Property not found")
+
+    payload = jwt.decode(dependencies, JWT_SECRET_KEY, ALGORITHM)
+    user_id = payload['sub']
+    if int(user_id) == prop.owner_id:
+        raise HTTPException(status_code=403, detail="Can not rate own property")
+
+    rating = crud.get_rating(db, property_id, user_id)
+    if rating:
+        raise HTTPException(status_code=403, detail="You already rated this property")
+
+    crud.create_rating(db, property_id, user_id, rate)
+    return {"message": "Rated this property successfully"}
+
+
+@app.post("/check-rating")
+@token_required
+def check_rating(rate: schemas.CheckRate, dependencies=Depends(JWTBearer()), db: Session = Depends(get_db)):
+    rating = crud.get_rating(db, rate.property_id, rate.user_id)
+    return bool(rating)
 
 
 # Todo
 # file storage?
 # Docs, refactor
-# Add rating, check if user has rated. Users cannot rate own properties, all ratings
-# Meet the team - users with most properties
-# permissions, some views are for everybody and some are only for logged in users
 

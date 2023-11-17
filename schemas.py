@@ -19,6 +19,8 @@ class PropertyCreate(PropertyBase):
 
 class Property(PropertyBase):
     id: int
+    average_rating: float
+    owner_number: str
 
     class Config:
         from_attributes = True
@@ -48,3 +50,12 @@ class User(UserBase):
 
 class Token(BaseModel):
     access_token: str
+
+
+class Rate(BaseModel):
+    vote: Literal['1', '2', '3', '4', '5']
+
+
+class CheckRate(BaseModel):
+    user_id: int
+    property_id: int
