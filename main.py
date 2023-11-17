@@ -1,13 +1,12 @@
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from sqlalchemy.orm import Session
 from starlette import status
-from jose import jwt
 
 from datetime import datetime
 import crud
 import models
 import schemas
-from auth_bearer import JWTBearer
+from auth_bearer import get_token_credentials
 
 from database import SessionLocal, engine
 from utils import verify_password, create_access_token, token_required, is_property_owner
@@ -15,9 +14,6 @@ from utils import verify_password, create_access_token, token_required, is_prope
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
-
-JWT_SECRET_KEY = "57fa348014a82862718ea6825f6b71692b465e0ca0c68c8e75f23155c6cf0a4e"
-ALGORITHM = "HS256"
 
 
 # Dependency
@@ -29,48 +25,65 @@ def get_db():
         db.close()
 
 
-@app.post("/register/", response_model=schemas.User)
+def authenticate_user(email: str, password: str, db: Session):
+    db_user = crud.get_user_by_email(db, email=email)
+    if db_user is None or not verify_password(password, db_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Incorrect email or password"
+        )
+    return db_user
+
+
+@app.post("/register/", response_model=schemas.RegisterUser)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    db_user_with_email = crud.get_user_by_email(db, email=user.email)
-    if db_user_with_email:
+    # Check if email is already registered
+    if crud.get_user_by_email(db, email=user.email):
         raise HTTPException(status_code=400, detail="Email already registered")
 
-    db_user_with_phone_number = crud.get_user_by_phone_number(db, phone_number=user.phone_number)
-    if db_user_with_phone_number:
+    # Check if phone number is already registered
+    if crud.get_user_by_phone_number(db, phone_number=user.phone_number):
         raise HTTPException(status_code=400, detail="Phone number already registered")
 
-    return crud.create_user(db=db, user=user)
+    # Create the user
+    db_user = crud.create_user(db=db, user=user)
+
+    # Authenticate the user and generate tokens
+    access_token = create_access_token(db_user.id)
+
+    # Save access token to the database
+    crud.create_token(db=db, user_id=db_user.id, access_token=access_token, status=True)
+
+    user_dict = db_user.__dict__
+
+    # Remove any keys that are not part of the Pydantic model
+    user_dict.pop('_sa_instance_state', None)
+
+    # Add the average_rating to the dictionary
+    user_dict['access_token'] = access_token
+
+    # Create an instance of the Pydantic model
+    response_model = schemas.RegisterUser(**user_dict)
+    return response_model
 
 
 @app.post('/login', summary="Create access and refresh tokens for user", response_model=schemas.Token)
 def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
-    db_user_with_email = crud.get_user_by_email(db, email=user.email)
-    if db_user_with_email is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Incorrect email or password"
-        )
+    db_user = authenticate_user(user.email, user.password, db)
 
-    hashed_pass = db_user_with_email.hashed_password
-    if not verify_password(user.password, hashed_pass):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Incorrect email or password"
-        )
+    # Generate access token
+    access_token = create_access_token(db_user.id)
 
-    access = create_access_token(db_user_with_email.id)
-    crud.create_token(db=db, user_id=db_user_with_email.id, access_token=access, status=True)
+    # Save access token to the database
+    crud.create_token(db=db, user_id=db_user.id, access_token=access_token, status=True)
 
-    return {
-        "access_token": access,
-    }
+    return {"access_token": access_token}
 
 
 @app.post('/logout')
 @token_required
-def logout(dependencies=Depends(JWTBearer()), db: Session = Depends(get_db)):
-    token = dependencies
-    payload = jwt.decode(token, JWT_SECRET_KEY, ALGORITHM)
+def logout(request: Request, token_credentials=Depends(get_token_credentials), db: Session = Depends(get_db)):
+    payload = request.state.current_user
     user_id = payload['sub']
     token_records = db.query(models.Token).all()
     expired_tokens = []
@@ -82,7 +95,7 @@ def logout(dependencies=Depends(JWTBearer()), db: Session = Depends(get_db)):
     if expired_tokens:
         crud.delete_expired_tokens(db, expired_tokens)
 
-    crud.set_inactive_token(db, user_id, token)
+    crud.set_inactive_token(db, user_id, token_credentials)
 
     return {"message": "Logout Successfully"}
 
@@ -97,8 +110,12 @@ def get_user_by_id(user_id: int, db: Session = Depends(get_db)):
 
 @app.post("/properties/", response_model=schemas.Property)
 @token_required
-def create_property(prop: schemas.PropertyCreate, dependencies=Depends(JWTBearer()), db: Session = Depends(get_db)):
-    return crud.create_property(db=db, prop=prop, token=dependencies)
+def create_property(request: Request,
+                    prop: schemas.PropertyCreate,
+                    token_credentials=Depends(get_token_credentials),
+                    db: Session = Depends(get_db)):
+
+    return crud.create_property(db=db, prop=prop, token=token_credentials)
 
 
 @app.get("/properties/", response_model=list[schemas.Property])
@@ -109,7 +126,11 @@ def get_properties(db: Session = Depends(get_db)):
 
 @app.get("/properties/{property_id}/edit", response_model=schemas.Property)
 @token_required
-def edit_property(property_id: int, dependencies=Depends(JWTBearer()), db: Session = Depends(get_db)):
+def edit_property(request: Request,
+                  property_id: int,
+                  token_credentials=Depends(get_token_credentials),
+                  db: Session = Depends(get_db)):
+
     prop = crud.get_property(db, property_id)
     if prop is None:
         raise HTTPException(status_code=404, detail="Property not found")
@@ -119,7 +140,12 @@ def edit_property(property_id: int, dependencies=Depends(JWTBearer()), db: Sessi
 @app.patch("/properties/{property_id}/edit", response_model=schemas.Property)
 @token_required
 @is_property_owner
-def edit_property(property_id: int, prop_data: schemas.PropertyCreate, dependencies=Depends(JWTBearer()), db: Session = Depends(get_db)):
+def edit_property(request: Request,
+                  property_id: int,
+                  prop_data: schemas.PropertyCreate,
+                  token_credentials=Depends(get_token_credentials),
+                  db: Session = Depends(get_db)):
+
     prop = crud.get_property(db, property_id)
     return crud.edit_property(db, prop, prop_data)
 
@@ -127,15 +153,22 @@ def edit_property(property_id: int, prop_data: schemas.PropertyCreate, dependenc
 @app.delete("/properties/{property_id}/delete")
 @token_required
 @is_property_owner
-def delete_property(property_id: int, dependencies=Depends(JWTBearer()), db: Session = Depends(get_db)):
+def delete_property(request: Request,
+                    property_id: int,
+                    token_credentials=Depends(get_token_credentials),
+                    db: Session = Depends(get_db)):
+
     crud.delete_property(db, property_id)
     return {'message': 'Property deleted successfully'}
 
 
 @app.get("/my-properties/", response_model=list[schemas.Property])
 @token_required
-def get_my_properties(dependencies=Depends(JWTBearer()), db: Session = Depends(get_db)):
-    properties = crud.get_my_properties(db, dependencies)
+def get_my_properties(request: Request,
+                      token_credentials=Depends(get_token_credentials),
+                      db: Session = Depends(get_db)):
+
+    properties = crud.get_my_properties(db, token_credentials)
     return properties
 
 
@@ -165,12 +198,16 @@ def get_property_by_id(property_id: int, db: Session = Depends(get_db)):
 
 @app.post("/properties/{property_id}/rate")
 @token_required
-def rate_property(rate: schemas.Rate, property_id: int, dependencies=Depends(JWTBearer()), db: Session = Depends(get_db)):
+def rate_property(request: Request,
+                  rate: schemas.Rate, property_id: int,
+                  token_credentials=Depends(get_token_credentials),
+                  db: Session = Depends(get_db)):
+
     prop = crud.get_property(db, property_id)
     if prop is None:
         raise HTTPException(status_code=404, detail="Property not found")
 
-    payload = jwt.decode(dependencies, JWT_SECRET_KEY, ALGORITHM)
+    payload = request.state.current_user
     user_id = payload['sub']
     if int(user_id) == prop.owner_id:
         raise HTTPException(status_code=403, detail="Can not rate own property")
@@ -185,7 +222,11 @@ def rate_property(rate: schemas.Rate, property_id: int, dependencies=Depends(JWT
 
 @app.post("/check-rating")
 @token_required
-def check_rating(rate: schemas.CheckRate, dependencies=Depends(JWTBearer()), db: Session = Depends(get_db)):
+def check_rating(request: Request,
+                 rate: schemas.CheckRate,
+                 token_credentials=Depends(get_token_credentials),
+                 db: Session = Depends(get_db)):
+
     rating = crud.get_rating(db, rate.property_id, rate.user_id)
     return bool(rating)
 

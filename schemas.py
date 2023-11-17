@@ -48,6 +48,13 @@ class User(UserBase):
         from_attributes = True
 
 
+class RegisterUser(User):
+    access_token: str
+
+    class Config:
+        from_attributes = True
+
+
 class Token(BaseModel):
     access_token: str
 

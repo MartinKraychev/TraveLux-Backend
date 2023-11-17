@@ -1,6 +1,7 @@
 from jose import jwt
 from fastapi import Request, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import Depends
 
 
 ALGORITHM = "HS256"
@@ -17,44 +18,21 @@ def decode_jwt(jw_token: str):
 
 
 class JWTBearer(HTTPBearer):
-    def __init__(self, auto_error: bool = True):
-        super(JWTBearer, self).__init__(auto_error=auto_error)
-
     async def __call__(self, request: Request):
         credentials: HTTPAuthorizationCredentials = await super(JWTBearer, self).__call__(request)
         if credentials:
             if not credentials.scheme == "Bearer":
                 raise HTTPException(status_code=403, detail="Invalid authentication scheme.")
-            if not self.verify_jwt(credentials.credentials):
+
+            payload = decode_jwt(credentials.credentials)
+            request.state.current_user = payload
+            if not payload:
                 raise HTTPException(status_code=403, detail="Invalid token or expired token.")
-            return credentials.credentials
+
+            return credentials
         else:
             raise HTTPException(status_code=403, detail="Invalid authorization code.")
 
-    @staticmethod
-    def verify_jwt(jw_token: str) -> bool:
-        is_token_valid: bool = False
-        try:
-            payload = decode_jwt(jw_token)
-        except jwt.JWTError:
-            payload = None
-        if payload:
-            is_token_valid = True
-        return is_token_valid
 
-
-jwt_bearer = JWTBearer()
-# class JWTBearer(HTTPBearer):
-#     async def __call__(self, request: Request):
-#         credentials: HTTPAuthorizationCredentials = await super(JWTBearer, self).__call__(request)
-#         if credentials:
-#             if not credentials.scheme == "Bearer":
-#                 raise HTTPException(status_code=403, detail="Invalid authentication scheme.")
-#
-#             payload = decode_jwt(credentials.credentials)
-#             if not payload:
-#                 raise HTTPException(status_code=403, detail="Invalid token or expired token.")
-#
-#             return credentials.credentials
-#         else:
-#             raise HTTPException(status_code=403, detail="Invalid authorization code.")
+def get_token_credentials(credentials: HTTPAuthorizationCredentials = Depends(JWTBearer())) -> str:
+    return credentials.credentials
