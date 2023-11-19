@@ -19,11 +19,14 @@ class PropertyCreate(PropertyBase):
 
 class Property(PropertyBase):
     id: int
-    average_rating: float
     owner_number: str
 
     class Config:
         from_attributes = True
+
+
+class PropertyWithRating(Property):
+    average_rating: float
 
 
 class UserBase(BaseModel):

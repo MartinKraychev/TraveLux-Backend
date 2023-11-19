@@ -1,14 +1,7 @@
-from functools import wraps
-
-from fastapi import HTTPException, Request
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from typing import Union, Any
 from jose import jwt
-from fastapi.responses import JSONResponse
-
-import crud
-import models
 
 
 JWT_SECRET_KEY = "57fa348014a82862718ea6825f6b71692b465e0ca0c68c8e75f23155c6cf0a4e"
@@ -19,14 +12,23 @@ password_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def get_hashed_password(password):
+    """
+    Hashes password
+    """
     return password_context.hash(password)
 
 
 def verify_password(password, hashed_pass):
+    """
+    Compares hash of password against password
+    """
     return password_context.verify(password, hashed_pass)
 
 
 def create_access_token(subject: Union[str, Any], expires_delta: timedelta = None) -> str:
+    """
+    Creates access token
+    """
     if expires_delta is not None:
         expires_delta = datetime.utcnow() + expires_delta
     else:
@@ -37,39 +39,19 @@ def create_access_token(subject: Union[str, Any], expires_delta: timedelta = Non
     return encoded_jwt
 
 
-def token_required(func):
-    @wraps(func)
-    def wrapper(*args, request: Request, **kwargs):
-        payload = request.state.current_user
-        user_id = payload['sub']
-        data = kwargs['db'].query(models.Token).filter_by(user_id=user_id,
-                                                          access_token=kwargs['token_credentials'],
-                                                          status=True).first()
-        if data:
-            return func(request=request, **kwargs)
+def attach_average_rating(prop):
+    """
+    Gets the avg rating of a prop
+    """
+    # Calculate average rating
+    average_rating = sum([rate.vote for rate in prop.ratings]) / len(prop.ratings) if prop.ratings else 0.0
 
-        else:
-            return JSONResponse(content={"msg": "Token blocked"}, status_code=403)
+    # Create a dictionary representation of the model
+    prop_dict = prop.__dict__
 
-    return wrapper
+    # Remove any keys that are not part of the Pydantic model
+    prop_dict.pop('_sa_instance_state', None)
 
-
-def is_property_owner(func):
-    @wraps(func)
-    def wrapper(*args, request: Request, **kwargs):
-        db = kwargs['db']
-        property_id = kwargs['property_id']
-        prop = crud.get_property(db, property_id)
-
-        if prop is None:
-            raise HTTPException(status_code=404, detail="Property not found")
-
-        payload = request.state.current_user
-        user_id = payload['sub']
-
-        if int(user_id) != prop.owner_id:
-            raise HTTPException(status_code=403, detail="Unauthorised")
-
-        return func(request=request, **kwargs)
-
-    return wrapper
+    # Add the average_rating to the dictionary
+    prop_dict['average_rating'] = average_rating
+    return prop_dict

@@ -4,6 +4,9 @@ import models
 
 
 def create_token(db: Session, user_id, access_token, status):
+    """
+    Creates access token
+    """
     token_db = models.Token(user_id=user_id, access_token=access_token, status=status)
     db.add(token_db)
     db.commit()
@@ -11,11 +14,17 @@ def create_token(db: Session, user_id, access_token, status):
 
 
 def delete_expired_tokens(db: Session, tokens):
+    """
+    Delete expired tokens
+    """
     db.query(models.Token).where(models.Token.user_id.in_(tokens)).delete()
     db.commit()
 
 
 def set_inactive_token(db: Session, user_id, token):
+    """
+    Sets token to be inactive
+    """
     existing_token = db.query(models.Token).filter(models.Token.user_id == user_id,
                                                    models.Token.access_token == token).first()
     if existing_token:

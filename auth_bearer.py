@@ -9,6 +9,9 @@ JWT_SECRET_KEY = "57fa348014a82862718ea6825f6b71692b465e0ca0c68c8e75f23155c6cf0a
 
 
 def decode_jwt(jw_token: str):
+    """
+    Decodes a token if possible
+    """
     try:
         # Decode and verify the token
         payload = jwt.decode(jw_token, JWT_SECRET_KEY, ALGORITHM)
@@ -18,6 +21,9 @@ def decode_jwt(jw_token: str):
 
 
 class JWTBearer(HTTPBearer):
+    """
+    Auth bearer to check JWT eligibility
+    """
     async def __call__(self, request: Request):
         credentials: HTTPAuthorizationCredentials = await super(JWTBearer, self).__call__(request)
         if credentials:
@@ -35,4 +41,7 @@ class JWTBearer(HTTPBearer):
 
 
 def get_token_credentials(credentials: HTTPAuthorizationCredentials = Depends(JWTBearer())) -> str:
+    """
+    Creates a token dependency
+    """
     return credentials.credentials

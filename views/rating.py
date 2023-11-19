@@ -7,9 +7,33 @@ from auth_bearer import get_token_credentials
 
 import schemas
 from db import get_db
-from utils import token_required
+from decorators import token_required
 
 router = APIRouter()
+
+
+@router.post("/check-rating")
+@token_required
+def can_rate(request: Request,
+             rate: schemas.CheckRate,
+             token_credentials=Depends(get_token_credentials),
+             db: Session = Depends(get_db)):
+    """
+    Checks if user can rate a property
+    """
+
+    prop = property_operations.get_property(db, rate.property_id)
+    if prop is None:
+        return False
+
+    if int(rate.user_id) == prop.owner_id:
+        return False
+
+    rating = rating_operations.get_rating(db, rate.property_id, rate.user_id)
+    if rating:
+        return False
+
+    return True
 
 
 @router.post("/{property_id}")
@@ -18,6 +42,9 @@ def rate_property(request: Request,
                   rate: schemas.Rate, property_id: int,
                   token_credentials=Depends(get_token_credentials),
                   db: Session = Depends(get_db)):
+    """
+    Property rating by user
+    """
 
     prop = property_operations.get_property(db, property_id)
     if prop is None:
@@ -35,13 +62,3 @@ def rate_property(request: Request,
     rating_operations.create_rating(db, property_id, user_id, rate)
     return {"message": "Rated this property successfully"}
 
-
-@router.post("/check-rating")
-@token_required
-def check_rating(request: Request,
-                 rate: schemas.CheckRate,
-                 token_credentials=Depends(get_token_credentials),
-                 db: Session = Depends(get_db)):
-
-    rating = rating_operations.get_rating(db, rate.property_id, rate.user_id)
-    return bool(rating)

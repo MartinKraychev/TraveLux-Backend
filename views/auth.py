@@ -10,12 +10,16 @@ import models
 import schemas
 from database_operations import user_operations, token_operations
 from db import get_db
-from utils import token_required, verify_password, create_access_token
+from decorators import token_required
+from utils import verify_password, create_access_token
 
 router = APIRouter()
 
 
 def authenticate_user(email: str, password: str, db: Session):
+    """
+    Check if user exist and the password is valid
+    """
     db_user = user_operations.get_user_by_email(db, email=email)
     if db_user is None or not verify_password(password, db_user.hashed_password):
         raise HTTPException(
@@ -27,6 +31,9 @@ def authenticate_user(email: str, password: str, db: Session):
 
 @router.post("/register/", response_model=schemas.RegisterUser)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    """
+    Validates the creating of user
+    """
     # Check if email is already registered
     if user_operations.get_user_by_email(db, email=user.email):
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -36,7 +43,7 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Phone number already registered")
 
     # Create the user
-    db_user = create_user(db=db, user=user)
+    db_user = user_operations.create_user(db=db, user=user)
 
     # Authenticate the user and generate tokens
     access_token = create_access_token(db_user.id)
@@ -60,6 +67,9 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
 @router.post('/login', summary="Create access and refresh tokens for user", response_model=schemas.Token)
 def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
+    """
+    Authenticates users by creating access tokens
+    """
     db_user = authenticate_user(user.email, user.password, db)
 
     # Generate access token
@@ -74,6 +84,9 @@ def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
 @router.post('/logout')
 @token_required
 def logout(request: Request, token_credentials=Depends(get_token_credentials), db: Session = Depends(get_db)):
+    """
+    Logs out users by setting their token to be inactive
+    """
     payload = request.state.current_user
     user_id = payload['sub']
     token_records = db.query(models.Token).all()

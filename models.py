@@ -1,6 +1,6 @@
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Float, DateTime
 from sqlalchemy.orm import relationship
-from database import Base
+from db_info import Base
 import datetime
 
 
@@ -24,7 +24,7 @@ class Property(Base):
     title = Column(String, index=True)
     type = Column(String, index=True)
     image_url = Column(String, index=True)
-    # img -> cloudinary
+    # img -> cloudinary?
     price_per_night = Column(Float, index=True)
     address = Column(String, index=True)
     owner_number = Column(String, index=True)

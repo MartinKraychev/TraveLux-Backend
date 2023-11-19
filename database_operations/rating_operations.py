@@ -4,11 +4,17 @@ import models
 
 
 def get_rating(db: Session, property_id, user_id):
+    """
+    Get the rating of a propertu
+    """
     return db.query(models.Rating).filter(models.Rating.owner_id == user_id,
                                           models.Rating.property_id == property_id).first()
 
 
 def create_rating(db, property_id, user_id, rate):
+    """
+    Create a rating for a property
+    """
     rating_fields = rate.model_dump()
     rating_fields['owner_id'] = user_id
     rating_fields['property_id'] = property_id
