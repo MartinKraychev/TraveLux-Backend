@@ -21,12 +21,12 @@ def delete_expired_tokens(db: Session, tokens):
     db.commit()
 
 
-def set_inactive_token(db: Session, user_id, token):
+def set_inactive_token(db: Session, token):
     """
     Sets token to be inactive
     """
-    existing_token = db.query(models.Token).filter(models.Token.user_id == user_id,
-                                                   models.Token.access_token == token).first()
+    existing_token = db.query(models.Token).filter(models.Token.access_token == token).first()
+
     if existing_token:
         existing_token.status = False
         db.add(existing_token)

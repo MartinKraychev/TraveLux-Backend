@@ -99,6 +99,6 @@ def logout(request: Request, token_credentials=Depends(get_token_credentials), d
     if expired_tokens:
         token_operations.delete_expired_tokens(db, expired_tokens)
 
-    token_operations.set_inactive_token(db, user_id, token_credentials)
+    token_operations.set_inactive_token(db, token_credentials)
 
     return {"message": "Logout Successfully"}
