@@ -77,23 +77,7 @@ def get_property_by_id(property_id: int, db: Session = Depends(get_db)):
     return response_model
 
 
-@router.get("/{property_id}/edit", response_model=schemas.Property)
-@token_required
-def edit_property(request: Request,
-                  property_id: int,
-                  token_credentials=Depends(get_token_credentials),
-                  db: Session = Depends(get_db)):
-    """
-    Gets the edit details of a property
-    """
-
-    prop = property_operations.get_property(db, property_id)
-    if prop is None:
-        raise HTTPException(status_code=404, detail="Property not found")
-    return prop
-
-
-@router.patch("/{property_id}/edit", response_model=schemas.Property)
+@router.put("/{property_id}/edit", response_model=schemas.Property)
 @token_required
 @is_property_owner
 def edit_property(request: Request,
