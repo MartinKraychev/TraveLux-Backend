@@ -26,10 +26,13 @@ def can_rate(request: Request,
     if prop is None:
         return False
 
-    if int(rate.user_id) == prop.owner_id:
+    payload = request.state.current_user
+    user_id = payload['sub']
+
+    if int(user_id) == prop.owner_id:
         return False
 
-    rating = rating_operations.get_rating(db, rate.property_id, rate.user_id)
+    rating = rating_operations.get_rating(db, rate.property_id, user_id)
     if rating:
         return False
 

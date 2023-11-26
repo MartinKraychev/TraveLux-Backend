@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 class PropertyBase(BaseModel):
     title: str
-    type: Literal['Flat', 'Vila', 'House']
+    type: Literal['Flat', 'Villa', 'House']
     image_url: str
     price_per_night: float
     address: str
@@ -27,6 +27,7 @@ class Property(PropertyBase):
 
 class PropertyWithRating(Property):
     average_rating: float
+    owner_id: int
 
 
 class UserBase(BaseModel):
@@ -60,6 +61,7 @@ class RegisterUser(User):
 
 class Token(BaseModel):
     access_token: str
+    user_id: int
 
 
 class Rate(BaseModel):
@@ -67,5 +69,4 @@ class Rate(BaseModel):
 
 
 class CheckRate(BaseModel):
-    user_id: int
     property_id: int

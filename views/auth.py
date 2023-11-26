@@ -78,7 +78,7 @@ def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
     # Save access token to the database
     token_operations.create_token(db=db, user_id=db_user.id, access_token=access_token, status=True)
 
-    return {"access_token": access_token}
+    return {"access_token": access_token, "user_id": db_user.id}
 
 
 @router.post('/logout')
