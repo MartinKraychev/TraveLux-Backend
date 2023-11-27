@@ -62,6 +62,20 @@ def get_my_properties(request: Request,
     return modified_properties
 
 
+@router.get("/photos")
+def get_random_photos(db: Session = Depends(get_db)):
+    """
+    Gets 6 random property photos
+    """
+    # Use SQLAlchemy to query 6 random properties
+    random_properties = property_operations.get_random_properties(db)
+
+    # Extract the photo URLs from the properties
+    photo_urls = [prop.image_url for prop in random_properties]
+
+    return photo_urls
+
+
 @router.get("/{property_id}", response_model=schemas.PropertyWithRating)
 def get_property_by_id(property_id: int, db: Session = Depends(get_db)):
     """
@@ -106,3 +120,4 @@ def delete_property(request: Request,
 
     property_operations.delete_property(db, property_id)
     return {'message': 'Property deleted successfully'}
+

@@ -53,5 +53,5 @@ def attach_average_rating(prop):
     prop_dict.pop('_sa_instance_state', None)
 
     # Add the average_rating to the dictionary
-    prop_dict['average_rating'] = average_rating
+    prop_dict['average_rating'] = round(average_rating, 1)
     return prop_dict

@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 
 import models
 import schemas
+from sqlalchemy.sql.expression import func
 from database_operations.user_operations import get_user_by_id
 
 
@@ -65,3 +66,7 @@ def delete_property(db: Session, property_id):
     prop = get_property(db, property_id)
     db.delete(prop)
     db.commit()
+
+
+def get_random_properties(db: Session):
+    return db.query(models.Property).order_by(func.random()).limit(6).all()
