@@ -6,7 +6,7 @@ from jose import jwt
 
 JWT_SECRET_KEY = "57fa348014a82862718ea6825f6b71692b465e0ca0c68c8e75f23155c6cf0a4e"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 180  # 180 minutes
+ACCESS_TOKEN_EXPIRE_MINUTES = 10080  # A week
 
 password_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
