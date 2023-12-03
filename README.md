@@ -41,7 +41,8 @@ Start the server
 ```
 
 ## API Reference
- The main URL for this is https://travelux-ooow2st62q-nw.a.run.app if used directly or http://localhost:8000 if tested locally
+ The main URL for this is https://travelux-ooow2st62q-nw.a.run.app if used directly or http://localhost:8000 if tested locally.
+ 
  Alternative to the explanation below is the FastApi swagger for this app
 https://travelux-ooow2st62q-nw.a.run.app/docs
 #### Auth
