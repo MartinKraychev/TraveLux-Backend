@@ -1,8 +1,10 @@
+from os import environ as env
+
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-SQLALCHEMY_DATABASE_URL = "postgresql://my_user:4295aHUJXgQzkBbasijrt7ogw8pmku6x@dpg-cll15g4jtl8s73f580a0-a.frankfurt-postgres.render.com/travelux_db"
+SQLALCHEMY_DATABASE_URL = f"postgresql://{env['DB_USER']}:{env['DB_PASSWORD']}@{env['DB_SERVER']}/{env['DB_NAME']}"
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 
