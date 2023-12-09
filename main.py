@@ -13,7 +13,7 @@ models.Base.metadata.create_all(bind=engine)
 app = FastAPI()
 
 # Configure CORS
-origins = ["*"]
+origins = ["https://marvelous-dusk-809212.netlify.app", "http://localhost:3000"]
 
 app.add_middleware(
     CORSMiddleware,
