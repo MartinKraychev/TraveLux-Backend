@@ -13,7 +13,7 @@ from utils import attach_average_rating
 router = APIRouter()
 
 
-@router.post("/", response_model=schemas.Property)
+@router.post("", response_model=schemas.Property)
 @token_required
 def create_property(request: Request,
                     prop: schemas.PropertyCreate,
@@ -28,7 +28,7 @@ def create_property(request: Request,
     return property_operations.create_property(db=db, prop=prop, user_id=user_id)
 
 
-@router.get("/", response_model=list[schemas.PropertyWithRating])
+@router.get("", response_model=list[schemas.PropertyWithRating])
 def get_properties(db: Session = Depends(get_db)):
     """
     Gets all properties and adds average rating for each

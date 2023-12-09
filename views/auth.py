@@ -29,7 +29,7 @@ def authenticate_user(email: str, password: str, db: Session):
     return db_user
 
 
-@router.post("/register/", response_model=schemas.RegisterUser)
+@router.post("/register", response_model=schemas.RegisterUser)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     """
     Validates the creating of user
